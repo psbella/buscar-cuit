@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buscar CUIT</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main>
+    <h1>Buscar CUIT</h1>
+    <p class="aviso">
+      Datos públicos del padrón de ARCA (ex AFIP) vía endpoint experimental no oficial.
+      Puede fallar o estar caído — no es apto para producción tal como está.
+    </p>
+
+    <form id="form-cuit">
+      <input type="text" id="cuit" placeholder="Ej: 30500010912" maxlength="11" required>
+      <button type="submit">Buscar</button>
+    </form>
+
+    <div id="estado"></div>
+    <div id="resultado" class="oculto"></div>
+  </main>
+
+  <script>
+    const form = document.getElementById('form-cuit');
+    const estado = document.getElementById('estado');
+    const resultado = document.getElementById('resultado');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cuit = document.getElementById('cuit').value.trim();
+      resultado.classList.add('oculto');
+      estado.textContent = 'Buscando...';
+
+      try {
+        const resp = await fetch(`/api/cuit/${encodeURIComponent(cuit)}`);
+        const data = await resp.json();
+
+        if (!data.ok) {
+          estado.textContent = `⚠️ ${data.error}`;
+          return;
+        }
+
+        estado.textContent = '';
+        const r = data.resultado;
+        resultado.innerHTML = `
+          <h2>${r.nombre}</h2>
+          <table>
+            <tr><th>CUIT</th><td>${r.cuit}</td></tr>
+            <tr><th>Tipo de persona</th><td>${r.tipo_persona}</td></tr>
+            <tr><th>Estado</th><td>${r.estado}</td></tr>
+            <tr><th>Domicilio</th><td>${r.domicilio.direccion}, ${r.domicilio.localidad} (${r.domicilio.provincia}) CP ${r.domicilio.codigo_postal}</td></tr>
+            <tr><th>Condición IVA</th><td>${r.datos_fiscales.condicion_iva}</td></tr>
+            <tr><th>Actividades</th><td>${r.datos_fiscales.actividades.join(', ') || '—'}</td></tr>
+          </table>
+        `;
+        resultado.classList.remove('oculto');
+      } catch (err) {
+        estado.textContent = '⚠️ Error de conexión con el servidor.';
+      }
+    });
+  </script>
+</body>
+</html>
